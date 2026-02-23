@@ -1,9 +1,13 @@
 import cv2
+import os
 import matplotlib.pyplot as plt
 from factory import *
 
 # Чтение изображения
-img = cv2.imread('test.jpg')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+image_path = os.path.join(current_dir, "test.jpg")
+
+img = cv2.imread(image_path)
 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 plt.imshow(img_rgb)
 plt.axis('off')
@@ -50,8 +54,12 @@ show_linear_contrast_results(original_red, original_green, original_blue,
                              parse_grayscale(
                                  red_stretched), parse_grayscale(green_stretched), parse_grayscale(blue_stretched),
                              0, y_max)
-# Пилообразное контрастирование
 
+# Пилообразное контрастирование
+show_image_saw_contrast(img_rgb, 1)
+show_image_saw_contrast(img_rgb, 2)
+show_image_saw_contrast(img_rgb, 3)
+show_image_saw_contrast(img_rgb, 4)
 
 # Соляризация цветного изображения
 red_solarized, green_solarize, blue_solarized, rgb_solarize = solarize_image(img_rgb)

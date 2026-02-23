@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+
 def get_rgb_channels(img_rgb):
     width, height = get_size(img_rgb)
     red_channel, green_channel, blue_channel = split_channels(img_rgb, width, height)
@@ -497,7 +498,6 @@ def gray_correction(img_rgb):
 
 
 def show_image_gray_correction(img_original, img_corrected):
-
     plt.figure(figsize=(10, 5))
     plt.subplot(2, 3, 1)
     plt.imshow(img_original)
@@ -555,7 +555,6 @@ def log_correction(image):
 
 
 def show_image_log_correction(img_original, img_corrected):
-
     plt.figure(figsize=(10, 5))
 
     # Исходное RGB изображение
@@ -589,3 +588,102 @@ def show_image_log_correction(img_original, img_corrected):
     plt.tight_layout()
     plt.show()
 
+
+def saw_contrast_color(img_rgb, mode: int, N: int = 3):
+    """
+    Параметры:
+        img_rgb — входное RGB изображение (uint8)
+        mode — тип преобразования (1, 2, 3, 4)
+        N — число периодов (для mode=4)
+    """
+
+    img = img_rgb.astype(np.float32)
+    R, G, B = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+
+    def transform(channel):
+
+        y = np.zeros_like(channel)
+
+        if mode == 1:
+            # Тип 1
+            x1, x2 = 80, 200
+            mask = (channel >= x1) & (channel <= x2)
+            y[mask] = (channel[mask] - x1) * 255.0 / (x2 - x1)
+            y[channel > x2] = 100
+
+        elif mode == 2:
+            # Тип 2
+            x1 = 100
+            mask = channel <= x1
+            y[mask] = channel[mask] * 255.0 / x1
+            y[channel > x1] = 255
+
+        elif mode == 3:
+            # Тип 3
+            x1, x2 = 50, 180
+            mask = (channel >= x1) & (channel <= x2)
+            y[mask] = (channel[mask] - x1) * 255.0 / (x2 - x1)
+
+        elif mode == 4:
+            # Тип 4
+            if N <= 0:
+                raise ValueError("N должно быть > 0")
+            L = 256
+            period = L / N
+            y = (channel % period) * (255.0 / period)
+
+        else:
+            raise ValueError("mode должен быть 1, 2, 3 или 4")
+
+        return np.clip(y, 0, 255)
+
+    R_new = transform(R)
+    G_new = transform(G)
+    B_new = transform(B)
+
+    img_new = np.stack([R_new, G_new, B_new], axis=2).astype(np.uint8)
+
+    return R_new.astype(np.uint8), \
+        G_new.astype(np.uint8), \
+        B_new.astype(np.uint8), \
+        img_new
+
+
+def show_image_saw_contrast(img_original, mode: int, N: int = 3):
+
+    R, G, B, img_corrected = saw_contrast_color(img_original, mode, N)
+
+    plt.figure(figsize=(12, 6))
+
+    # Исходное изображение
+    plt.subplot(2, 3, 1)
+    plt.imshow(img_original)
+    plt.title("Исходное RGB")
+    plt.axis("off")
+
+    # После контрастирования
+    plt.subplot(2, 3, 2)
+    plt.imshow(img_corrected)
+    plt.title(f"Пилообразное контрастирование (тип {mode})")
+    plt.axis("off")
+
+    # R канал
+    plt.subplot(2, 3, 4)
+    plt.imshow(R, cmap='gray')
+    plt.title("R канал")
+    plt.axis("off")
+
+    # G канал
+    plt.subplot(2, 3, 5)
+    plt.imshow(G, cmap='gray')
+    plt.title("G канал")
+    plt.axis("off")
+
+    # B канал
+    plt.subplot(2, 3, 6)
+    plt.imshow(B, cmap='gray')
+    plt.title("B канал")
+    plt.axis("off")
+
+    plt.tight_layout()
+    plt.show()
