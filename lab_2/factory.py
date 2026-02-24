@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+
 # =========================
 # БАЗОВЫЕ ОПЕРАЦИИ
 # =========================
@@ -200,9 +201,12 @@ def solarize_image(img_rgb):
     xmax_B = 0
     for y in range(height):
         for x in range(width):
-            if R[y, x] > xmax_R: xmax_R = R[y, x]
-            if G[y, x] > xmax_G: xmax_G = G[y, x]
-            if B[y, x] > xmax_B: xmax_B = B[y, x]
+            if R[y, x] > xmax_R:
+                xmax_R = R[y, x]
+            if G[y, x] > xmax_G:
+                xmax_G = G[y, x]
+            if B[y, x] > xmax_B:
+                xmax_B = B[y, x]
 
     k_R = 4 / xmax_R if xmax_R != 0 else 0
     k_G = 4 / xmax_G if xmax_G != 0 else 0
@@ -237,8 +241,10 @@ def gamma_correction_gray(img_rgb, gamma=3.0):
             gray = 0.299 * R + 0.587 * G + 0.114 * B
             gray /= 255.0
             val = gray ** gamma * 255
-            if val > 255: val = 255
-            if val < 0: val = 0
+            if val > 255:
+                val = 255
+            if val < 0:
+                val = 0
             corrected[y, x] = int(val)
     return corrected
 
@@ -324,3 +330,48 @@ def log_correction(img_rgb):
     log_img = np.clip(log_img, 0, 255).astype(np.uint8)
 
     return log_img
+
+
+def show_comparison(original_rgb, processed_rgb, title):
+
+    R_orig, G_orig, B_orig, _, _ = get_rgb_channels(original_rgb)
+    R_proc, G_proc, B_proc, _, _ = get_rgb_channels(processed_rgb)
+
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+
+    # === ОРИГИНАЛ ===
+    axes[0, 0].imshow(original_rgb)
+    axes[0, 0].set_title("Оригинал RGB")
+    axes[0, 0].axis("off")
+
+    axes[0, 1].imshow(R_orig, cmap="gray")
+    axes[0, 1].set_title("R канал")
+    axes[0, 1].axis("off")
+
+    axes[0, 2].imshow(G_orig, cmap="gray")
+    axes[0, 2].set_title("G канал")
+    axes[0, 2].axis("off")
+
+    axes[0, 3].imshow(B_orig, cmap="gray")
+    axes[0, 3].set_title("B канал")
+    axes[0, 3].axis("off")
+
+    # === РЕЗУЛЬТАТ ===
+    axes[1, 0].imshow(processed_rgb)
+    axes[1, 0].set_title(title + " RGB")
+    axes[1, 0].axis("off")
+
+    axes[1, 1].imshow(R_proc, cmap="gray")
+    axes[1, 1].set_title("R канал")
+    axes[1, 1].axis("off")
+
+    axes[1, 2].imshow(G_proc, cmap="gray")
+    axes[1, 2].set_title("G канал")
+    axes[1, 2].axis("off")
+
+    axes[1, 3].imshow(B_proc, cmap="gray")
+    axes[1, 3].set_title("B канал")
+    axes[1, 3].axis("off")
+
+    plt.tight_layout()
+    plt.show()
