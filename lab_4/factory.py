@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
+import math
 
 # =========================================================
 # Функция чтения изображения
@@ -166,9 +166,34 @@ def logical_operations(img1, img2, title="Logical operations"):
 def unary_logical_with_const(img, const):
     img = to_gray(img)
 
-    and_img = img & const
-    or_img = img | const
-    xor_img = img ^ const
+    h = len(img)
+    w = len(img[0])
+
+    and_img = [[0] * w for _ in range(h)]
+    or_img = [[0] * w for _ in range(h)]
+    xor_img = [[0] * w for _ in range(h)]
+
+    for i in range(h):
+        for j in range(w):
+            p = img[i][j]
+
+            # AND
+            if p != 0 and const != 0:
+                and_img[i][j] = 255
+            else:
+                and_img[i][j] = 0
+
+            # OR
+            if p != 0 or const != 0:
+                or_img[i][j] = 255
+            else:
+                or_img[i][j] = 0
+
+            # XOR
+            if (p != 0 and const == 0) or (p == 0 and const != 0):
+                xor_img[i][j] = 255
+            else:
+                xor_img[i][j] = 0
 
     fig, axs = plt.subplots(1, 4, figsize=(12, 4))
 
@@ -194,7 +219,32 @@ def unary_logical_with_const(img, const):
 # Логическое отрицание изображения
 # =========================================================
 def logical_not(img):
-    return 255 - img
+    # получаем размеры
+    h, w = img.shape[:2]
+    c = 1 if len(img.shape) == 2 else img.shape[2]
+
+    # создаём результат
+    if c == 1:
+        result = [[0]*w for _ in range(h)]
+    else:
+        result = [[[0]*c for _ in range(w)] for _ in range(h)]
+
+    for i in range(h):
+        for j in range(w):
+            if c == 1:  # grayscale
+                val = int(img[i, j])
+                bits = list(f"{val:08b}")
+                bits = ['0' if b == '1' else '1' for b in bits]
+                result[i][j] = int("".join(bits), 2)
+            else:  # цветное изображение
+                for k in range(c):
+                    val = int(img[i, j, k])
+                    bits = list(f"{val:08b}")
+                    bits = ['0' if b == '1' else '1' for b in bits]
+                    result[i][j][k] = int("".join(bits), 2)
+
+    return result
+
 
 
 # =========================================================
@@ -228,19 +278,47 @@ def show_not(color_img, bw_img):
 # Сравнение изображения с константой
 # =========================================================
 def compare_with_const(img, const):
-    eq = (img == const) * 255
-    gt = (img > const) * 255
-    lt = (img < const) * 255
+    h, w = img.shape[:2]
+    c = 1 if len(img.shape) == 2 else img.shape[2]
 
+    # создаём результаты
+    if c == 1:
+        eq = [[0]*w for _ in range(h)]
+        gt = [[0]*w for _ in range(h)]
+        lt = [[0]*w for _ in range(h)]
+    else:
+        eq = [[[0]*c for _ in range(w)] for _ in range(h)]
+        gt = [[[0]*c for _ in range(w)] for _ in range(h)]
+        lt = [[[0]*c for _ in range(w)] for _ in range(h)]
+
+    for i in range(h):
+        for j in range(w):
+            if c == 1:
+                p = int(img[i, j])
+                eq[i][j] = 255 if p == const else 0
+                gt[i][j] = 255 if p > const else 0
+                lt[i][j] = 255 if p < const else 0
+            else:
+                for k in range(c):
+                    p = int(img[i, j, k])
+                    eq[i][j][k] = 255 if p == const else 0
+                    gt[i][j][k] = 255 if p > const else 0
+                    lt[i][j][k] = 255 if p < const else 0
+
+    # отображение
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 
-    axs[0].imshow(eq.astype(np.uint8))
+    if c == 1:
+        axs[0].imshow(eq, cmap="gray")
+        axs[1].imshow(gt, cmap="gray")
+        axs[2].imshow(lt, cmap="gray")
+    else:
+        axs[0].imshow(eq)
+        axs[1].imshow(gt)
+        axs[2].imshow(lt)
+
     axs[0].set_title("=")
-
-    axs[1].imshow(gt.astype(np.uint8))
     axs[1].set_title(">")
-
-    axs[2].imshow(lt.astype(np.uint8))
     axs[2].set_title("<")
 
     for ax in axs:
@@ -253,21 +331,52 @@ def compare_with_const(img, const):
 # Сравнение двух изображений
 # =========================================================
 def compare_images(img1, img2):
+    # приводим второе изображение к размеру первого
     img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
 
-    eq = (img1 == img2) * 255
-    gt = (img1 > img2) * 255
-    lt = (img1 < img2) * 255
+    h, w = img1.shape[:2]
+    c = 1 if len(img1.shape) == 2 else img1.shape[2]
 
+    # создаём результаты
+    if c == 1:
+        eq = [[0]*w for _ in range(h)]
+        gt = [[0]*w for _ in range(h)]
+        lt = [[0]*w for _ in range(h)]
+    else:
+        eq = [[[0]*c for _ in range(w)] for _ in range(h)]
+        gt = [[[0]*c for _ in range(w)] for _ in range(h)]
+        lt = [[[0]*c for _ in range(w)] for _ in range(h)]
+
+    # сравнение пиксель за пикселем
+    for i in range(h):
+        for j in range(w):
+            if c == 1:  # grayscale
+                p1 = int(img1[i, j])
+                p2 = int(img2[i, j])
+                eq[i][j] = 255 if p1 == p2 else 0
+                gt[i][j] = 255 if p1 > p2 else 0
+                lt[i][j] = 255 if p1 < p2 else 0
+            else:  # цветное изображение
+                for k in range(c):
+                    p1 = int(img1[i, j, k])
+                    p2 = int(img2[i, j, k])
+                    eq[i][j][k] = 255 if p1 == p2 else 0
+                    gt[i][j][k] = 255 if p1 > p2 else 0
+                    lt[i][j][k] = 255 if p1 < p2 else 0
+
+    # отображение
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    if c == 1:
+        axs[0].imshow(eq, cmap="gray")
+        axs[1].imshow(gt, cmap="gray")
+        axs[2].imshow(lt, cmap="gray")
+    else:
+        axs[0].imshow(eq)
+        axs[1].imshow(gt)
+        axs[2].imshow(lt)
 
-    axs[0].imshow(eq.astype(np.uint8))
     axs[0].set_title("=")
-
-    axs[1].imshow(gt.astype(np.uint8))
     axs[1].set_title(">")
-
-    axs[2].imshow(lt.astype(np.uint8))
     axs[2].set_title("<")
 
     for ax in axs:
@@ -276,120 +385,178 @@ def compare_images(img1, img2):
     plt.show()
 
 
-# =========================================================
-# Арифметические операции между изображениями
-# =========================================================
+# ============================
+# Арифметика между изображениями
+# ============================
 def arithmetic_images(img1, img2):
     img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+    h, w = img1.shape[:2]
+    c = 1 if len(img1.shape) == 2 else img1.shape[2]
 
-    add = cv2.add(img1, img2)
-    sub = cv2.subtract(img1, img2)
-    mul = cv2.multiply(img1, img2)
-
-    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-
-    axs[0].imshow(add)
-    axs[0].set_title("Add")
-
-    axs[1].imshow(sub)
-    axs[1].set_title("Subtract")
-
-    axs[2].imshow(mul)
-    axs[2].set_title("Multiply")
-
-    for ax in axs:
-        ax.axis("off")
-
-    plt.show()
-
-
-# =========================================================
-# Арифметические операции с константой
-# =========================================================
-def arithmetic_const(img, const):
-    add = cv2.add(img, const)
-    sub = cv2.subtract(img, const)
-    mul = cv2.multiply(img, const)
-
-    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-
-    axs[0].imshow(add)
-    axs[0].set_title("+ const")
-
-    axs[1].imshow(sub)
-    axs[1].set_title("- const")
-
-    axs[2].imshow(mul)
-    axs[2].set_title("* const")
-
-    for ax in axs:
-        ax.axis("off")
-
-    plt.show()
-
-
-# =========================================================
-# Деление изображений
-# =========================================================
-def divide_images(img1, img2):
-    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
-
-    img1 = img1.astype(np.float32)
-    img2 = img2.astype(np.float32)
-
-    img2[img2 == 0] = 1
-
-    result = img1 / img2
-
-    min_val = result.min()
-    max_val = result.max()
-
-    if max_val != min_val:
-        result = (result - min_val) / (max_val - min_val) * 255
+    if c == 1:
+        add = [[0]*w for _ in range(h)]
+        sub = [[0]*w for _ in range(h)]
+        mul = [[0]*w for _ in range(h)]
     else:
-        result = np.zeros_like(result)
+        add = [[[0]*c for _ in range(w)] for _ in range(h)]
+        sub = [[[0]*c for _ in range(w)] for _ in range(h)]
+        mul = [[[0]*c for _ in range(w)] for _ in range(h)]
 
-    result = result.astype(np.uint8)
+    for i in range(h):
+        for j in range(w):
+            if c == 1:
+                p1, p2 = int(img1[i, j]), int(img2[i, j])
+                add[i][j] = min(p1 + p2, 255)
+                sub[i][j] = max(p1 - p2, 0)
+                mul[i][j] = min(p1 * p2, 255)
+            else:
+                for k in range(c):
+                    p1, p2 = int(img1[i, j, k]), int(img2[i, j, k])
+                    add[i][j][k] = min(p1 + p2, 255)
+                    sub[i][j][k] = max(p1 - p2, 0)
+                    mul[i][j][k] = min(p1 * p2, 255)
 
-    plt.imshow(result, cmap="gray")
-    plt.title("Division")
-    plt.axis("off")
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    axs[0].imshow(add, cmap="gray" if c==1 else None)
+    axs[0].set_title("Add")
+    axs[1].imshow(sub, cmap="gray" if c==1 else None)
+    axs[1].set_title("Subtract")
+    axs[2].imshow(mul, cmap="gray" if c==1 else None)
+    axs[2].set_title("Multiply")
+    for ax in axs: ax.axis("off")
     plt.show()
 
 
-def divide_images_gray(img1, img2):
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+# ============================
+# Арифметика с константой
+# ============================
+def arithmetic_const(img, const):
+    h, w = img.shape[:2]
+    c = 1 if len(img.shape) == 2 else img.shape[2]
+
+    if c == 1:
+        add = [[0]*w for _ in range(h)]
+        sub = [[0]*w for _ in range(h)]
+        mul = [[0]*w for _ in range(h)]
+    else:
+        add = [[[0]*c for _ in range(w)] for _ in range(h)]
+        sub = [[[0]*c for _ in range(w)] for _ in range(h)]
+        mul = [[[0]*c for _ in range(w)] for _ in range(h)]
+
+    for i in range(h):
+        for j in range(w):
+            if c == 1:
+                p = int(img[i, j])
+                add[i][j] = min(p + const, 255)
+                sub[i][j] = max(p - const, 0)
+                mul[i][j] = min(p * const, 255)
+            else:
+                for k in range(c):
+                    p = int(img[i, j, k])
+                    add[i][j][k] = min(p + const, 255)
+                    sub[i][j][k] = max(p - const, 0)
+                    mul[i][j][k] = min(p * const, 255)
+
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    axs[0].imshow(add, cmap="gray" if c==1 else None)
+    axs[0].set_title("+ const")
+    axs[1].imshow(sub, cmap="gray" if c==1 else None)
+    axs[1].set_title("- const")
+    axs[2].imshow(mul, cmap="gray" if c==1 else None)
+    axs[2].set_title("* const")
+    for ax in axs: ax.axis("off")
+    plt.show()
+
+
+# ============================
+# Деление изображений
+# ============================
+def divide_images(img1, img2):
+    import matplotlib.pyplot as plt
+    import cv2
 
     img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+    h, w = img1.shape[:2]
+    c = 1 if len(img1.shape) == 2 else img1.shape[2]
 
-    img1 = img1.astype(np.float32)
-    img2 = img2.astype(np.float32)
+    # создаём результат
+    result = [[[0] * c for _ in range(w)] for _ in range(h)] if c > 1 else [[0] * w for _ in range(h)]
 
-    img2[img2 == 0] = 1
+    # деление
+    if c == 1:
+        for i in range(h):
+            for j in range(w):
+                p1, p2 = float(img1[i, j]), float(img2[i, j])
+                if p2 == 0: p2 = 1
+                result[i][j] = p1 / p2
+        # находим min/max
+        min_val = min([min(row) for row in result])
+        max_val = max([max(row) for row in result])
+        # нормализация
+        norm = [[int((result[i][j] - min_val) / (max_val - min_val) * 255) for j in range(w)] for i in range(h)]
+    else:
+        # цветное изображение
+        # делаем нормализацию для каждого канала отдельно
+        result = [[[0] * c for _ in range(w)] for _ in range(h)]
+        for i in range(h):
+            for j in range(w):
+                for k in range(c):
+                    p1 = float(img1[i, j, k])
+                    p2 = float(img2[i, j, k])
+                    if p2 == 0: p2 = 1
+                    result[i][j][k] = p1 / p2
+        # нормализация по каждому каналу
+        norm = [[[0] * c for _ in range(w)] for _ in range(h)]
+        for k in range(c):
+            # находим min/max для канала k
+            min_val = min([result[i][j][k] for i in range(h) for j in range(w)])
+            max_val = max([result[i][j][k] for i in range(h) for j in range(w)])
+            if max_val != min_val:
+                for i in range(h):
+                    for j in range(w):
+                        norm[i][j][k] = int((result[i][j][k] - min_val) / (max_val - min_val) * 255)
+            else:
+                for i in range(h):
+                    for j in range(w):
+                        norm[i][j][k] = 0
 
-    result = img1 / img2
-
-    result = cv2.normalize(result, None, 0, 255, cv2.NORM_MINMAX)
-    result = result.astype(np.uint8)
-
-    plt.imshow(result, cmap="gray")
+    plt.imshow(norm, cmap="gray" if c == 1 else None)
     plt.title("Division")
     plt.axis("off")
     plt.show()
 
 
-# =========================================================
-# Вычисление норм между изображениями
-# =========================================================
+# ============================
+# Нормы между изображениями
+# ============================
 def image_norms(img1, img2):
     img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+    h, w = img1.shape[:2]
+    c = 1 if len(img1.shape) == 2 else img1.shape[2]
 
-    diff = img1.astype(np.float32) - img2.astype(np.float32)
+    c_norm = 0
+    l1_norm = 0
+    l2_sum = 0
 
-    c_norm = np.max(np.abs(diff))
-    l1_norm = np.sum(np.abs(diff))
-    l2_norm = np.sqrt(np.sum(diff ** 2))
+    for i in range(h):
+        for j in range(w):
+            if c == 1:
+                p1, p2 = float(img1[i, j]), float(img2[i, j])
+                diff = p1 - p2
+                abs_diff = abs(diff)
+                c_norm = max(c_norm, abs_diff)
+                l1_norm += abs_diff
+                l2_sum += diff*diff
+            else:
+                for k in range(c):
+                    p1, p2 = float(img1[i, j, k]), float(img2[i, j, k])
+                    diff = p1 - p2
+                    abs_diff = abs(diff)
+                    c_norm = max(c_norm, abs_diff)
+                    l1_norm += abs_diff
+                    l2_sum += diff*diff
+
+    l2_norm = math.sqrt(l2_sum)
 
     print("C norm:", c_norm)
     print("L1 norm:", l1_norm)

@@ -79,7 +79,6 @@ def rotate_origin(img, angle_deg):
 
     for y in range(h):
         for x in range(w):
-            src_x = int(x * np.cos(angle) + y * np.sin(angle))
             src_y = int(-x * np.sin(angle) + y * np.cos(angle))
 
             if 0 <= src_x < w and 0 <= src_y < h:
